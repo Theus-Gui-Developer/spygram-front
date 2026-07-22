@@ -95,21 +95,23 @@
         {:else}
           {#each previewPosts as post}
             <div class="aspect-square rounded-md overflow-hidden bg-slate-100">
-              {#if post.video_url}
+              {#if post.post?.video_url}
                 <video
-                  src={post.video_url}
-                  poster={post.image_url || post.thumbnail_url}
+                  src={post.post.video_url}
+                  poster={post.post.image_url || undefined}
                   class="w-full h-full object-cover"
                   muted
                   playsinline
                   preload="metadata"
                 ></video>
-              {:else}
+              {:else if post.post?.image_url}
                 <img
-                  src={post.image_url || post.thumbnail_url}
+                  src={post.post.image_url}
                   alt="Post"
                   class="w-full h-full object-cover"
                 />
+              {:else}
+                <div class="w-full h-full bg-slate-200"></div>
               {/if}
             </div>
           {/each}

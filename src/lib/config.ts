@@ -28,9 +28,11 @@ export function proxiedImageUrl(originalUrl: string | null | undefined): string 
 export function proxiedPostMedia(post: InstagramPost): InstagramPost {
   return {
     ...post,
-    thumbnail_url: proxiedImageUrl(post.thumbnail_url),
-    image_url: proxiedImageUrl(post.image_url),
-    video_url: proxiedImageUrl(post.video_url),
+    post: {
+      ...post.post,
+      image_url: post.post?.image_url ? proxiedImageUrl(post.post.image_url) : null,
+      video_url: post.post?.video_url ? proxiedImageUrl(post.post.video_url) : null,
+    },
     de_usuario: post.de_usuario
       ? {
           ...post.de_usuario,
