@@ -13,6 +13,11 @@
     setSearchProfile,
     setSearchUsername,
   } from '../lib/search-store.svelte'
+  import {
+    getSearchCache,
+    getCachedEntryUrl,
+    saveSearchCache,
+  } from '../lib/search-cache'
 
   const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '')
   const username = params.get('usuario') ?? searchStore.username ?? 'usuario.exemplo'
@@ -25,6 +30,26 @@
 
   onMount(() => {
     setSearchUsername(username)
+
+    const cache = getSearchCache()
+    if (cache) {
+      if (cache.username !== searchStore.username) {
+        window.location.replace(getCachedEntryUrl(cache))
+        return
+      }
+      if (cache.buscaCompleta) {
+        setSearchProfile(cache.profile)
+        setSearchBuscaCompleta(cache.buscaCompleta)
+        window.location.hash = `#/vsl?usuario=${encodeURIComponent(cache.username)}&genero=${encodeURIComponent(cache.genero)}`
+        return
+      }
+      if (cache.profile) {
+        setSearchProfile(cache.profile)
+        showConfirm = true
+        return
+      }
+    }
+
     loadProfile()
   })
 
@@ -35,6 +60,7 @@
     try {
       const profile = await fetchProfile(username)
       setSearchProfile(profile)
+      saveSearchCache({ username: profile.username, genero, profile })
       showConfirm = true
     } catch (error) {
       const message = error instanceof InstagramApiError ? error.message : 'Não foi possível localizar o perfil. Tente novamente.'
@@ -54,6 +80,12 @@
       const fingerprint = getFingerprint()
       const result = await fetchBuscaCompleta(username, fingerprint)
       setSearchBuscaCompleta(result)
+      saveSearchCache({
+        username: result.instagram_profile.username,
+        genero,
+        profile: result.instagram_profile,
+        buscaCompleta: result,
+      })
       finished = true
       setTimeout(() => {
         window.location.hash = `#/vsl?usuario=${encodeURIComponent(username)}&genero=${genero}`
@@ -68,6 +100,10 @@
       localError = message
       setSearchError(message, isBlocked ? 'blocked' : '')
       if (isBlocked) {
+        const currentProfile = searchStore.profile
+        if (currentProfile) {
+          saveSearchCache({ username: currentProfile.username, genero, profile: currentProfile })
+        }
         setTimeout(() => {
           window.location.hash = `#/vsl?usuario=${encodeURIComponent(username)}&genero=${genero}`
         }, 2500)

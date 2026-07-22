@@ -13,6 +13,8 @@
   import Terms from './routes/Terms.svelte'
   import Privacy from './routes/Privacy.svelte'
   import AnimatedBackground from './components/AnimatedBackground.svelte'
+  import { getSearchCache, getCachedEntryUrl, TRACKED_SEARCH_ROUTES, saveSearchCache } from './lib/search-cache'
+  import { hydrateSearchStore } from './lib/search-store.svelte'
 
   /**
    * Estrutura de rotas espelhando a referência (lá: history routing com basename /v4;
@@ -83,8 +85,60 @@
     }
   }
 
+  const BACK_REDIRECT_ROUTES: Route[] = ['vsl', 'relatorio', 'acessando-instagram', 'InstaView']
+
+  hydrateSearchStore()
+
+  function currentUsernameFromHash(): string | null {
+    return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('usuario')
+  }
+
+  function enforceSearchCache() {
+    const cache = getSearchCache()
+    if (!cache) return
+
+    const currentUsername = currentUsernameFromHash()
+
+    if (route === 'pre' || route === 'inicio') {
+      window.location.replace(getCachedEntryUrl(cache))
+      return
+    }
+
+    if (
+      (TRACKED_SEARCH_ROUTES as readonly string[]).includes(route) &&
+      currentUsername &&
+      currentUsername !== cache.username
+    ) {
+      window.location.replace(getCachedEntryUrl(cache))
+      return
+    }
+
+    if (
+      (TRACKED_SEARCH_ROUTES as readonly string[]).includes(route) &&
+      currentUsername === cache.username &&
+      cache.lastRoute !== route
+    ) {
+      saveSearchCache({ ...cache, lastRoute: route })
+    }
+  }
+
+  const initialRoute = parseRoute()
+  if (typeof window !== 'undefined') {
+    const cache = getSearchCache()
+    if (cache) {
+      if (initialRoute.route === 'pre' || initialRoute.route === 'inicio') {
+        window.location.replace(getCachedEntryUrl(cache))
+      } else if (
+        (TRACKED_SEARCH_ROUTES as readonly string[]).includes(initialRoute.route) &&
+        new URLSearchParams(initialRoute.query).get('usuario') !== cache.username
+      ) {
+        window.location.replace(getCachedEntryUrl(cache))
+      }
+    }
+  }
+
   let route = $state(parseRoute().route)
-  let backRedirectSet = $state(false)
+  let backRedirectMarked = $state<Set<string>>(new Set())
 
   function syncRoute() {
     const raw = window.location.hash.replace(/^#\/?/, '')
@@ -96,19 +150,27 @@
       return
     }
     route = parseRoute().route
+    enforceSearchCache()
   }
 
-  // Back redirect: quando entra na VSL, empurra um estado extra no history
-  // para que o botão voltar vá para /back/vsl em vez de sair do funil.
+  // Back redirect: rotas do funil que, ao pressionar voltar, devem cair em
+  // /back/vsl em vez de sair do fluxo. VSL usa pushState (comportamento original);
+  // as demais rotas usam replaceState para marcar o histórico atual.
   $effect(() => {
-    if (route === 'vsl' && !backRedirectSet) {
-      backRedirectSet = true
+    if (!BACK_REDIRECT_ROUTES.includes(route)) return
+    if (backRedirectMarked.has(route)) return
+
+    backRedirectMarked = new Set([...backRedirectMarked, route])
+
+    if (route === 'vsl') {
       window.history.pushState({ backRedirect: true }, '', window.location.href)
+    } else {
+      window.history.replaceState({ backRedirect: true }, '', window.location.href)
     }
   })
 
   function handlePopState(event: PopStateEvent) {
-    if (event.state?.backRedirect && route === 'vsl') {
+    if (event.state?.backRedirect && BACK_REDIRECT_ROUTES.includes(route)) {
       event.preventDefault()
       const params = parseRoute().query
       window.location.hash = `#/back/vsl${params ? '?' + params : ''}`

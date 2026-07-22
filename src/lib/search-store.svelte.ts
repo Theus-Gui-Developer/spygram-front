@@ -1,5 +1,6 @@
 import type { BuscaCompleta, InstagramProfile, InstagramPost } from './api'
 import { proxiedPostMedia } from './config'
+import { getSearchCache } from './search-cache'
 
 export const searchStore = $state({
   username: '',
@@ -9,6 +10,14 @@ export const searchStore = $state({
   error: '',
   blockedReason: '',
 })
+
+export function hydrateSearchStore(): void {
+  const cache = getSearchCache()
+  if (!cache) return
+  searchStore.username = cache.username
+  searchStore.profile = cache.profile
+  searchStore.buscaCompleta = cache.buscaCompleta
+}
 
 export function getProxiedPosts(): InstagramPost[] {
   return searchStore.buscaCompleta?.instagram_posts.map(proxiedPostMedia) ?? []

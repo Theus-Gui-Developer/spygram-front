@@ -4,6 +4,7 @@
   import Footer from '../components/Footer.svelte'
   import FAQ from '../components/FAQ.svelte'
   import { setSearchUsername, clearSearchError } from '../lib/search-store.svelte'
+  import { getSearchCache, getCachedEntryUrl } from '../lib/search-cache'
 
   let username = $state('')
   let error = $state('')
@@ -24,6 +25,13 @@
     touched = true
     error = validate(username)
     if (error) return
+
+    const clean = username.replace(/^@/, '').trim().toLowerCase()
+    const cache = getSearchCache()
+    if (cache && cache.username !== clean) {
+      window.location.hash = getCachedEntryUrl(cache)
+      return
+    }
 
     setSearchUsername(username)
     clearSearchError()
