@@ -1,0 +1,347 @@
+/* Google Fonts: Inter (deve vir antes do Tailwind) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-spy-pink: #ff0069;
+  --color-spy-orange: #ff7a00;
+  --color-spy-yellow: #ffd600;
+  --color-spy-purple: #7638fa;
+  --color-spy-rose: #e1306c;
+  --color-spy-bg: #fff0f5;
+  --color-spy-card: #ffffff;
+  --color-spy-text: #0f172a;
+  --color-spy-muted: #64748b;
+  --color-spy-border: rgba(225, 48, 108, 0.18);
+}
+
+:root {
+  color: var(--color-spy-text);
+  background: var(--color-spy-bg);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100svh;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Gradient utilities */
+.spy-gradient {
+  background: linear-gradient(90deg, #ffd600 0%, #ff7a00 30%, #ff0069 65%, #7638fa 100%);
+  background-size: 200% 100%;
+  animation: gradientShift 4s ease infinite;
+}
+
+.spy-gradient-text {
+  background: linear-gradient(90deg, #ff7a00 0%, #ff0069 50%, #7638fa 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradientShift 4s ease infinite;
+}
+
+.spy-gradient-border {
+  position: relative;
+  background: white;
+  border-radius: 1rem;
+}
+
+.spy-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffd600, #ff7a00, #ff0069, #7638fa);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Soft shadow for cards */
+.spy-shadow {
+  box-shadow:
+    0 18px 50px rgba(225, 48, 108, 0.10),
+    0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* Checkbox item */
+.spy-checkbox {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.35rem;
+  background: linear-gradient(135deg, #ff7a00, #ff0069);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform 160ms ease;
+}
+
+.spy-checkbox:checked {
+  transform: scale(1.08);
+}
+
+.spy-checkbox::after {
+  content: '';
+  width: 0.4rem;
+  height: 0.7rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+/* Soft input */
+.spy-soft-input {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+
+.spy-soft-input:focus-within {
+  border-color: #ff0069;
+  box-shadow: 0 0 0 3px rgba(255, 0, 105, 0.10);
+  transform: translateY(-1px);
+}
+
+/* Page layout */
+.page-shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+}
+
+.page-card {
+  width: min(100%, 440px);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 2rem;
+  padding: 1.75rem;
+  box-shadow:
+    0 24px 60px rgba(225, 48, 108, 0.12),
+    0 8px 20px rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+@media (max-width: 480px) {
+  .page-card {
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Hover lift */
+.hover-lift {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(225, 48, 108, 0.15);
+}
+
+/* Soft page background */
+.spy-soft-gradient-bg {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.9) 0%, transparent 60%),
+    linear-gradient(180deg, #fff8fb 0%, #fff0f5 50%, #fff5f9 100%);
+}
+
+/* Simple checkbox: light gray when unchecked, gradient when checked */
+.spy-checkbox-simple {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.35rem;
+  background: #f1f5f9;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: all 160ms ease;
+}
+
+.spy-checkbox-simple.checked {
+  background: linear-gradient(135deg, #ff7a00 0%, #ff0069 100%);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(255, 0, 105, 0.2);
+}
+
+.spy-checkbox-simple.checked::after {
+  content: '';
+  width: 0.4rem;
+  height: 0.7rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+/* Stagger delays */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* ===== Referência v4: relatório ===== */
+
+/* Texto borrado (handles de usuário bloqueados) */
+.username-blur {
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Pulso de brilho dos CTAs (crack pulse) */
+@keyframes crackPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(59, 130, 246, 0.25); }
+  50% { box-shadow: 0 0 28px rgba(255, 0, 105, 0.65), 0 0 56px rgba(118, 56, 250, 0.30); }
+}
+
+@keyframes crackPulseGreen {
+  0%, 100% { box-shadow: 0 0 6px rgba(34, 197, 94, 0.25); }
+  50% { box-shadow: 0 0 28px rgba(34, 197, 94, 0.60), 0 0 56px rgba(22, 163, 74, 0.30); }
+}
+
+.animate-crack-pulse {
+  animation: crackPulse 1.1s ease-in-out infinite;
+}
+
+.animate-crack-pulse-green {
+  animation: crackPulseGreen 1.1s ease-in-out infinite;
+}
+
+/* Shimmer que atravessa o botão (translate, como na referência) */
+@keyframes shimmerX {
+  0% { transform: translate(-100%) skew(-15deg); }
+  100% { transform: translate(220%) skew(-15deg); }
+}
+
+.animate-shimmer-x {
+  animation: shimmerX 1.8s linear infinite;
+}
+
+/* Barras do waveform de áudio tocando */
+@keyframes audio-bar-bounce {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.audio-bar-playing {
+  transform-origin: center;
+  animation: audio-bar-bounce 0.6s ease-in-out infinite;
+}
+
+/* Shell claro do relatório (v4-report da referência) */
+.v4-report-shell {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 0, 105, 0.1), transparent 32%),
+    radial-gradient(circle at 86% 14%, rgba(255, 122, 0, 0.1), transparent 34%),
+    linear-gradient(180deg, #fff9fc, #fff4f8 46%, #f8fbff);
+  background-color: #fff9fc;
+}
+
+/* Card de seção claro do relatório (override v4-report da referência) */
+.v4-report-card {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(225, 48, 108, 0.14);
+  box-shadow: 0 12px 34px rgba(107, 29, 84, 0.08);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
