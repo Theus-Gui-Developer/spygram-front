@@ -80,11 +80,6 @@
     </div>
 
     <p class="text-xs text-slate-600 leading-relaxed whitespace-pre-line mb-4">{bio}</p>
-    {#if isPrivate}
-      <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
-        Perfil privado — a análise ainda é possível.
-      </div>
-    {/if}
 
     {#if !isPrivate}
       <div class="grid grid-cols-3 gap-1 mb-4">

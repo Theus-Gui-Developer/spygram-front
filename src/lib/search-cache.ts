@@ -10,7 +10,6 @@ export const TRACKED_SEARCH_ROUTES = [
   'relatorio',
   'acessando-instagram',
   'InstaView',
-  'back/vsl',
 ] as const
 
 export type TrackedSearchRoute = (typeof TRACKED_SEARCH_ROUTES)[number]
@@ -21,6 +20,8 @@ export interface SearchCache {
   profile: InstagramProfile | null
   buscaCompleta: BuscaCompleta | null
   lastRoute: TrackedSearchRoute | string
+  vslProgress?: number
+  instagramAccessGranted?: boolean
   createdAt: number
 }
 
@@ -52,6 +53,8 @@ export function getSearchCache(): SearchCache | null {
       lastRoute: isTrackedSearchRoute(parsed.lastRoute ?? '')
         ? (parsed.lastRoute as TrackedSearchRoute)
         : 'vsl',
+      vslProgress: typeof parsed.vslProgress === 'number' ? parsed.vslProgress : undefined,
+      instagramAccessGranted: parsed.instagramAccessGranted ?? undefined,
       createdAt: parsed.createdAt,
     }
   } catch {
@@ -85,12 +88,24 @@ export function saveSearchCache(
     profile: patch.profile ?? existing?.profile ?? null,
     buscaCompleta: patch.buscaCompleta ?? existing?.buscaCompleta ?? null,
     lastRoute: patch.lastRoute ?? existing?.lastRoute ?? 'vsl',
+    vslProgress:
+      typeof patch.vslProgress === 'number'
+        ? patch.vslProgress
+        : existing?.vslProgress ?? undefined,
+    instagramAccessGranted:
+      typeof patch.instagramAccessGranted === 'boolean'
+        ? patch.instagramAccessGranted
+        : existing?.instagramAccessGranted ?? undefined,
     createdAt: existing?.createdAt ?? Date.now(),
   }
   setSearchCache(next)
 }
 
 export function getCachedEntryUrl(cache: SearchCache): string {
-  const route = isTrackedSearchRoute(cache.lastRoute) ? cache.lastRoute : 'vsl'
+  let route = isTrackedSearchRoute(cache.lastRoute) ? cache.lastRoute : 'vsl'
+
+  // Nunca reabrir o funil numa tela de backredirect.
+  if (route.startsWith('back/')) route = 'vsl'
+
   return `#/${route}?usuario=${encodeURIComponent(cache.username)}&genero=${encodeURIComponent(cache.genero)}`
 }

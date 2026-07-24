@@ -1,13 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { getSearchCache, saveSearchCache } from '../lib/search-cache'
 
   /**
    * Port da rota /acessando-instagram da referência:
    * tela estilo login do Instagram com animação de "quebra de senha" (7s)
    * e redirecionamento automático para /InstaView (~8.5s).
+   *
+   * O estado de liberação é cacheado: depois que a animação roda uma vez,
+   * voltar para esta tela mostra diretamente "Acesso concedido!" com CTA.
    */
   const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '')
   const username = params.get('usuario') ?? 'usuario'
+  const genero = params.get('genero') ?? 'homem'
 
   const CRACK_DURATION_MS = 7000
   const REDIRECT_DELAY_MS = 1500
@@ -23,8 +28,20 @@
   let status = $state(statusTexts[0])
   let done = $state(false)
 
+  function continueToInstaView() {
+    window.location.hash = `#/InstaView?usuario=${encodeURIComponent(username)}&genero=${encodeURIComponent(genero)}`
+  }
+
   onMount(() => {
     window.scrollTo(0, 0)
+
+    const cache = getSearchCache()
+    if (cache?.instagramAccessGranted) {
+      password = '•'.repeat(18)
+      done = true
+      return
+    }
+
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
     // Animação dos " caracteres da senha sendo testados
@@ -47,11 +64,12 @@
       clearInterval(statusTimer)
       password = '•'.repeat(18)
       done = true
+      saveSearchCache({ username, genero, instagramAccessGranted: true })
     }, CRACK_DURATION_MS)
 
     // Redirect para o InstaView
     const redirectTimeout = setTimeout(() => {
-      window.location.hash = `#/InstaView?usuario=${encodeURIComponent(username)}`
+      continueToInstaView()
     }, CRACK_DURATION_MS + REDIRECT_DELAY_MS)
 
     return () => {
@@ -132,12 +150,13 @@
       </div>
     </div>
 
-    <!-- Botão entrar (fake) -->
+    <!-- Botão entrar (fake) ou continuar quando liberado -->
     <button
       type="button"
-      class="mb-4 w-full cursor-default rounded-[8px] bg-[#0095F6] py-2 text-[14px] font-semibold text-white opacity-80"
+      onclick={done ? continueToInstaView : undefined}
+      class="mb-4 w-full rounded-[8px] bg-[#0095F6] py-2 text-[14px] font-semibold text-white {done ? 'opacity-100' : 'cursor-default opacity-80'}"
     >
-      Entrar
+      {done ? 'Continuar' : 'Entrar'}
     </button>
 
     <div class="mb-6 text-[12px] text-[#1877F2]">Esqueceu a senha?</div>

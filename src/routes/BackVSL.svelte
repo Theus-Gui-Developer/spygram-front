@@ -1,228 +1,261 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import Logo from '../components/Logo.svelte'
-  import Footer from '../components/Footer.svelte'
-  import NotificationStack from '../components/NotificationStack.svelte'
-  import { analysisPhases, phaseDurationMs, liveNotifications } from '../lib/analysis-phases'
+  import { openCheckout, proxiedImageUrl } from '../lib/config'
+  import { getSearchCache } from '../lib/search-cache'
 
+  /**
+   * Port fiel da rota /back/vsl da referência:
+   * versão escura da VSL usada como backredirect a partir do relatório.
+   */
   const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '')
-  const username = params.get('usuario') ?? 'usuario.exemplo'
+  const cache = getSearchCache()
 
-  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random&size=128`
+  const username = params.get('usuario') ?? cache?.username ?? 'o perfil monitorado'
+  const profilePic = cache?.profile?.profile_pic_url
+    ? proxiedImageUrl(cache.profile.profile_pic_url)
+    : null
 
   const stats = {
-    posts: 428,
-    followers: '101.318',
-    following: 227,
+    mensagens: 148,
+    imagens: 35,
+    localizacoes: 2,
   }
 
-  let progress = $state(0)
-  let currentPhaseIndex = $state(0)
-  let completedPhases = $state<Set<string>>(new Set())
-  let videoStarted = $state(false)
-  let timer: ReturnType<typeof setInterval> | null = null
+  const benefits = [
+    'Acesso completo às DMs, Stories e fotos do Instagram <strong>sem deixar rastros ou alertas</strong>',
+    'Localização em tempo real e histórico de lugares visitados <strong>(incluindo endereços suspeitos)</strong>',
+    'Todas as fotos do celular, incluindo <strong>imagens íntimas já detectadas</strong>',
+    'Conversas deletadas recuperadas e <strong>áudios comprometedores</strong>',
+    '<strong>TOTAL ANONIMATO</strong> — A pessoa nunca saberá que está sendo monitorada',
+  ]
 
-  function startVideo() {
-    if (videoStarted) return
-    videoStarted = true
-    startProgress()
-  }
-
-  function startProgress() {
-    const totalDuration = analysisPhases.length * phaseDurationMs
-    const intervalMs = 32
-    const increment = 100 / (totalDuration / intervalMs)
-
-    timer = setInterval(() => {
-      progress += increment
-
-      const nextIndex = Math.min(Math.floor((progress / 100) * analysisPhases.length), analysisPhases.length - 1)
-
-      if (nextIndex !== currentPhaseIndex) {
-        completedPhases = new Set([...completedPhases, analysisPhases[currentPhaseIndex].id])
-        currentPhaseIndex = nextIndex
-      }
-
-      if (progress >= 100) {
-        progress = 100
-        completedPhases = new Set(analysisPhases.map((p) => p.id))
-        if (timer) clearInterval(timer)
-      }
-    }, intervalMs)
-  }
-
-  function goToReport() {
-    window.location.hash = `#/relatorio?usuario=${encodeURIComponent(username)}`
-  }
+  let toast = $state('')
+  let toastVisible = $state(false)
 
   onMount(() => {
+    const first = setTimeout(() => {
+      toast = `CUIDADO: @${username} pode receber um alerta!`
+      toastVisible = true
+    }, 600)
+    const hide = setTimeout(() => (toastVisible = false), 4600)
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100])
+
     return () => {
-      if (timer) clearInterval(timer)
+      clearTimeout(first)
+      clearTimeout(hide)
     }
   })
 
-  const badgeState = $derived.by(() => {
-    if (!videoStarted) return 'not-started'
-    if (progress >= 100) return 'completed'
-    return 'in-progress'
-  })
+  function scrollToOffer() {
+    const el = document.getElementById('oferta-especial')
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function backToReport() {
+    window.location.hash = `#/relatorio?usuario=${encodeURIComponent(username)}`
+  }
 </script>
 
-<div class="min-h-screen flex flex-col items-center px-4 py-6 spy-soft-gradient-bg">
-  <div class="w-full max-w-[480px]">
-    <div class="flex justify-center mb-4">
-      <Logo />
+<div class="min-h-screen bg-black px-4 py-6 text-white" style="font-family: 'Inter', sans-serif;">
+  <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-red-900/10 via-transparent to-purple-900/10"></div>
+
+  <div class="relative z-10 mx-auto w-full max-w-md">
+    <!-- Toast -->
+    <div
+      class="fixed left-1/2 top-4 z-50 w-[90%] max-w-sm -translate-x-1/2 rounded-xl bg-gradient-to-r from-red-600 to-red-500 px-4 py-3 shadow-[0_8px_32px_rgba(239,68,68,0.4)] transition-all duration-300 {toastVisible
+        ? 'translate-y-0 opacity-100'
+        : '-translate-y-4 opacity-0 pointer-events-none'}"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-base animate-pulse flex-shrink-0">🚨</span>
+          <p class="text-sm font-semibold leading-snug">{toast}</p>
+        </div>
+        <button onclick={() => (toastVisible = false)} class="text-white/70 hover:text-white text-lg leading-none flex-shrink-0">×</button>
+      </div>
     </div>
 
-    <div class="flex justify-center mb-5">
-      {#if badgeState === 'not-started'}
-        <span class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black uppercase tracking-wider text-slate-500 shadow-sm">
-          <span class="h-2 w-2 rounded-full bg-slate-400"></span>
-          Acesso não iniciado
-        </span>
-      {:else if badgeState === 'completed'}
-        <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-[11px] font-black uppercase tracking-wider text-emerald-700 shadow-sm">
-          <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-          Acesso concluído
-        </span>
-      {:else}
-        <span class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-black uppercase tracking-wider text-slate-700 shadow-sm border border-slate-200">
-          <span class="h-2 w-2 rounded-full bg-spy-rose animate-pulse"></span>
-          Acesso em andamento
-          <span class="ml-1 h-1 w-12 rounded-full bg-slate-100 overflow-hidden">
-            <span class="block h-full bg-black rounded-full transition-all duration-100" style="width: {progress}%"></span>
-          </span>
-        </span>
-      {/if}
+    <div class="mb-5 flex justify-center">
+      <Logo variant="light" />
     </div>
 
-    <!-- Placeholder VSL -->
+    <!-- Alerta principal -->
+    <div class="mb-5 rounded-2xl bg-gradient-to-b from-red-600 to-red-700 p-6 text-center shadow-[0_0_40px_rgba(239,68,68,0.3)] relative overflow-hidden">
+      <div class="relative z-10">
+        {#if profilePic}
+          <div class="mx-auto mb-3 h-16 w-16 overflow-hidden rounded-full border-[3px] border-white/30 shadow-lg">
+            <img src={profilePic} alt="@{username}" class="h-full w-full object-cover" />
+          </div>
+        {:else}
+          <div class="mb-3 text-5xl">⚠️</div>
+        {/if}
+        <h1 class="text-lg font-extrabold uppercase tracking-tight leading-tight">
+          @{username} vai receber um alerta dizendo que você está monitorando!
+        </h1>
+        <div class="mt-3 inline-block rounded-full bg-yellow-500 px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide text-black">
+          Cuidado
+        </div>
+      </div>
+    </div>
+
+    <!-- Explicação -->
+    <div class="mb-5 rounded-2xl border border-red-500/30 bg-white/5 p-5">
+      <p class="mb-3 text-sm leading-relaxed text-slate-200">
+        <strong class="text-white">Na versão gratuita</strong> o perfil que você está investigando pode receber uma notificação falando que você está investigando ele.
+      </p>
+      <p class="mb-4 text-sm leading-relaxed text-slate-200">
+        <strong class="text-white">Não deixe isso acontecer.</strong> Assine a versão paga do aplicativo e não deixe que o perfil receba uma notificação falando que você tentou monitorar.
+      </p>
+      <div class="mb-3 rounded-xl border border-green-500/30 bg-green-500/10 p-3">
+        <p class="text-sm font-semibold leading-relaxed text-green-300">
+          Continue monitorando e vendo todo conteúdo que quiser sem que a pessoa seja notificada.
+        </p>
+      </div>
+      <div class="rounded-xl border border-green-500/30 bg-green-500/10 p-3">
+        <p class="text-sm font-semibold leading-relaxed text-green-300">
+          Veja DMs, stories, fotos apagadas, curtidas secretas e localização!
+        </p>
+      </div>
+    </div>
+
+    <!-- Botão Instagram -->
     <button
       type="button"
-      onclick={startVideo}
-      class="mb-5 flex aspect-video w-full items-center justify-center overflow-hidden rounded-2xl bg-black border border-white/10 shadow-2xl transition-transform active:scale-[0.99]"
-      aria-label="Iniciar vídeo explicativo"
+      onclick={backToReport}
+      class="mb-5 flex w-full items-center gap-3 rounded-2xl bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737] p-4 text-left shadow-[0_10px_30px_rgba(225,48,108,0.35)] transition-all hover:brightness-110 active:scale-[0.98]"
     >
-      <div class="flex h-32 w-32 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-600 p-3">
-        <span class="text-center text-xs font-medium text-slate-500">Área reservada para VSL</span>
-        {#if !videoStarted}
-          <span class="mt-2 text-center text-[10px] font-bold uppercase tracking-wider text-spy-rose">Clique para iniciar</span>
-        {/if}
+      <img src="/v4/insta_logo.webp" alt="" class="h-10 w-10 shrink-0 rounded-lg" />
+      <div class="min-w-0 flex-1">
+        <div class="text-[14px] font-black leading-tight text-white">Ver o Instagram real de @{username}</div>
+        <div class="truncate text-[11px] text-white/90">Acesse fotos, posts e seguidores agora</div>
       </div>
+      <div class="shrink-0 rounded-full bg-white px-3 py-1.5 text-[12px] font-black text-[#E1306C]">ABRIR →</div>
     </button>
 
-    <div class="mb-4 text-center">
-      <p class="mb-1 text-[11px] font-black uppercase tracking-wider text-slate-500">Assista o vídeo enquanto</p>
-      <p class="text-xl font-bold text-slate-950">
-        Acessamos a conta <span class="text-spy-rose">@{username}</span>
-      </p>
-    </div>
-
-    <div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-center">
-      <p class="text-xs font-bold text-red-600 flex items-center justify-center gap-1.5">
-        <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
-        Não saia dessa página até que o acesso seja liberado
-      </p>
-    </div>
-
-    <!-- Card do perfil -->
-    <div class="mb-5 rounded-2xl border border-spy-border bg-white p-4 spy-shadow">
-      <div class="mb-4 flex items-center gap-3">
-        <img
-          src={avatarUrl}
-          alt={username}
-          class="h-14 w-14 rounded-full border-2 border-spy-rose/20 object-cover"
-        />
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-base font-bold text-slate-950">@{username}</p>
-          <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-600">
-            Perfil privado
-          </span>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-3 gap-2 text-center">
-        <div class="rounded-xl bg-slate-50 py-2.5">
-          <div class="text-sm font-bold text-slate-950">{stats.posts}</div>
-          <div class="text-[10px] font-medium uppercase tracking-wide text-slate-500">Posts</div>
-        </div>
-        <div class="rounded-xl bg-slate-50 py-2.5">
-          <div class="text-sm font-bold text-slate-950">{stats.followers}</div>
-          <div class="text-[10px] font-medium uppercase tracking-wide text-slate-500">Seguidores</div>
-        </div>
-        <div class="rounded-xl bg-slate-50 py-2.5">
-          <div class="text-sm font-bold text-slate-950">{stats.following}</div>
-          <div class="text-[10px] font-medium uppercase tracking-wide text-slate-500">Seguindo</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Painel de acesso em tempo real -->
-    <div class="mb-6 rounded-2xl border border-white/10 bg-[#0d0d10] p-4 text-white shadow-xl">
-      <div class="mb-3 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <h2 class="text-sm font-bold">Acesso em tempo real</h2>
-        </div>
-        <span class="text-sm font-black spy-gradient-text">{Math.round(progress)}%</span>
-      </div>
-
-      <div class="mb-4 h-2.5 overflow-hidden rounded-full bg-white/10">
-        <div class="h-full rounded-full spy-gradient transition-all duration-100" style="width: {Math.round(progress)}%"></div>
-      </div>
-
-      <ul class="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-        {#each analysisPhases as phase, i}
-          <li class="flex items-start gap-3 text-[13px]">
-            {#if completedPhases.has(phase.id)}
-              <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              <span class="text-slate-400 line-through">{phase.label}</span>
-            {:else if i === currentPhaseIndex}
-              <svg class="mt-0.5 h-4 w-4 flex-shrink-0 animate-spin text-spy-rose" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-              <span class="font-medium text-white">{phase.label}</span>
-            {:else}
-              <span class="mt-0.5 h-4 w-4 flex-shrink-0 rounded-full border-2 border-slate-600"></span>
-              <span class="text-slate-500">{phase.label}</span>
-            {/if}
-          </li>
-        {/each}
-      </ul>
-    </div>
-
-    {#if progress >= 90}
-      <div class="mb-4 animate-fadeInUp">
-        <div class="mb-3 rounded-xl border-2 border-red-200 bg-red-50 p-3 text-center">
-          <div class="flex items-center justify-center gap-2">
-            <span class="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
-            <span class="text-xs font-black uppercase tracking-wider text-red-600">Conteúdo suspeito identificado</span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onclick={goToReport}
-          class="spy-gradient group flex w-full flex-col items-center justify-center gap-0.5 rounded-2xl px-5 py-4 text-white shadow-[0_12px_28px_rgba(255,0,105,0.28)] transition-all duration-200 active:scale-[0.98]"
-        >
-          <span class="flex items-center gap-2 text-[16px] font-bold">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-200 group-hover:scale-110">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            CLIQUE AQUI PARA VER TUDO
-          </span>
-          <span class="text-[11px] font-medium text-white/90">
-            Acesse todo o conteúdo monitorado de @{username}
-          </span>
+    <!-- Resultados -->
+    <div class="mb-5 rounded-2xl border border-white/10 bg-white/5 p-5">
+      <h2 class="mb-4 text-center text-sm font-extrabold uppercase tracking-wide text-[#E1306C]">Resultados da Análise Completa</h2>
+      <div class="grid grid-cols-3 gap-3">
+        <button type="button" class="rounded-xl border border-[#E1306C]/40 bg-black/30 p-3 text-center transition-colors hover:bg-black/40 active:scale-[0.98]">
+          <span class="mb-1 block text-2xl">💬</span>
+          <div class="mb-1 text-xs font-bold text-[#E1306C]">Mensagens Suspeitas</div>
+          <div class="text-2xl font-black tabular-nums text-red-400">{stats.mensagens}</div>
+          <div class="text-[10px] text-slate-400">toque pra ver</div>
+        </button>
+        <button type="button" class="rounded-xl border border-[#E1306C]/40 bg-black/30 p-3 text-center transition-colors hover:bg-black/40 active:scale-[0.98]">
+          <span class="mb-1 block text-2xl">📸</span>
+          <div class="mb-1 text-xs font-bold text-[#E1306C]">Fotos Comprometedoras</div>
+          <div class="text-2xl font-black tabular-nums text-red-400">{stats.imagens}</div>
+          <div class="text-[10px] text-slate-400">toque pra ver</div>
+        </button>
+        <button type="button" class="rounded-xl border border-[#E1306C]/40 bg-black/30 p-3 text-center transition-colors hover:bg-black/40 active:scale-[0.98]">
+          <span class="mb-1 block text-2xl">📍</span>
+          <div class="mb-1 text-xs font-bold text-[#E1306C]">Localizações Suspeitas</div>
+          <div class="text-2xl font-black tabular-nums text-red-400">{stats.localizacoes}</div>
+          <div class="text-[10px] text-slate-400">toque pra ver</div>
         </button>
       </div>
-    {/if}
+    </div>
+
+    <!-- Oferta -->
+    <div id="oferta-especial" class="mb-5 scroll-mt-4 rounded-2xl border-[2px] border-green-500/40 bg-gradient-to-b from-green-900/40 to-green-800/20 p-5">
+      <h2 class="mb-1 text-center text-xl font-extrabold uppercase tracking-wide text-green-400">Oferta Especial Para Você!</h2>
+      <p class="mb-4 text-center text-xs text-slate-400">Desconto exclusivo por tempo limitado</p>
+      <div class="mb-4 text-center">
+        <div class="text-sm text-slate-400 line-through">De R$ 79,00</div>
+        <div class="flex items-center justify-center gap-3">
+          <div>
+            <div class="text-xs text-slate-300">até 12x de</div>
+            <div class="text-4xl font-black tracking-tight text-green-400">R$ 5,38</div>
+            <div class="text-xs text-slate-400">ou R$ 48,90 à vista</div>
+          </div>
+          <div class="rounded-full bg-red-500 px-3 py-1.5 text-xs font-extrabold text-white">36% OFF</div>
+        </div>
+      </div>
+      <button
+        type="button"
+        onclick={openCheckout}
+        class="animate-crack-pulse-green block w-full rounded-xl bg-gradient-to-r from-green-500 to-green-600 py-4 text-sm font-extrabold uppercase tracking-wide text-white shadow-[0_0_25px_rgba(34,197,94,0.45)] transition-all active:scale-95 hover:brightness-110"
+      >
+        <span class="flex items-center justify-center gap-2">
+          <span class="text-lg">🔒</span>
+          <span>SIM, QUERO MONITORAR SEM SER DESCOBERTO!</span>
+        </span>
+        <span class="mt-1 block text-[10px] font-normal normal-case tracking-normal opacity-90">Clique aqui para ter acesso completo e anônimo</span>
+      </button>
+      <div class="mt-3 flex items-center justify-center gap-2 rounded-xl bg-black/30 p-3">
+        <span class="text-lg">🛡️</span>
+        <div>
+          <div class="text-xs font-bold text-white">GARANTIA DE 30 DIAS</div>
+          <div class="text-[10px] text-slate-400">Se não funcionar, devolvemos 100% do seu dinheiro</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Benefícios -->
+    <div class="mb-5 rounded-2xl border border-white/10 bg-white/5 p-5">
+      <h2 class="mb-4 text-center text-sm font-extrabold uppercase tracking-wide text-[#E1306C]">
+        Se você quer ter acesso a todas essas evidências sem ser descoberto, preste atenção...
+      </h2>
+      <div class="space-y-3">
+        {#each benefits as item}
+          <div class="flex items-start gap-3">
+            <span class="mt-0.5 flex-shrink-0 text-sm text-green-400">✅</span>
+            <p class="text-xs leading-relaxed text-slate-300">{@html item}</p>
+          </div>
+        {/each}
+      </div>
+    </div>
+
+    <!-- Decisão -->
+    <div class="mb-5 rounded-2xl border border-red-500/30 bg-white/5 p-5">
+      <h3 class="mb-3 text-center text-sm font-extrabold text-red-400">A decisão está nas suas mãos...</h3>
+      <p class="mb-3 text-center text-xs leading-relaxed text-slate-300">
+        Você pode continuar arriscando ser descoberto na versão gratuita, ou garantir total anonimato com a versão paga.
+      </p>
+      <div class="mb-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3">
+        <p class="text-center text-xs leading-relaxed text-yellow-300">
+          <strong>ATENÇÃO:</strong> Na versão gratuita, o perfil pode receber um alerta sobre o monitoramento!
+        </p>
+      </div>
+      <div class="rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+        <p class="text-center text-xs leading-relaxed text-red-300">
+          <strong>LEMBRE-SE:</strong> @{username} pode descobrir que você está monitorando!
+        </p>
+      </div>
+    </div>
+
+    <!-- CTA final -->
+    <div class="mb-5 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 p-5 text-center">
+      <h3 class="mb-1 text-sm font-extrabold uppercase tracking-tight text-white">Última oportunidade!</h3>
+      <p class="mb-4 text-xs text-orange-100">Não deixe ser descoberto! Garanta seu anonimato agora!</p>
+      <button
+        type="button"
+        onclick={openCheckout}
+        class="animate-crack-pulse-green block w-full rounded-xl bg-gradient-to-r from-green-500 to-green-600 py-4 text-sm font-extrabold uppercase tracking-wide text-white shadow-[0_0_25px_rgba(34,197,94,0.45)] transition-all active:scale-95 hover:brightness-110"
+      >
+        <span class="flex items-center justify-center gap-2">
+          <span class="text-lg">🛡️</span>
+          <span>GARANTIR ANONIMATO TOTAL AGORA!</span>
+        </span>
+        <span class="mt-1 block text-[10px] font-normal normal-case tracking-normal opacity-80">Última chance de evitar ser descoberto</span>
+      </button>
+    </div>
+
+    <!-- Risco -->
+    <div class="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
+      <div class="mb-3 text-center">
+        <span class="text-3xl">🚨</span>
+        <h4 class="mt-1 text-sm font-extrabold uppercase text-red-400">Risco de ser descoberto!</h4>
+      </div>
+      <p class="mb-3 text-center text-xs leading-relaxed text-slate-300">
+        Sem a versão paga, você corre o risco de o perfil receber uma notificação como esta:
+      </p>
+      <div class="mb-3 rounded-xl border border-white/10 bg-black/40 p-3">
+        <p class="text-center text-xs italic text-slate-200">"Alguém está tentando acessar suas conversas e fotos do Instagram"</p>
+      </div>
+      <p class="text-center text-xs font-semibold text-red-400">Não deixe isso acontecer! Garanta já sua versão paga!</p>
+    </div>
   </div>
-
-  <Footer />
 </div>
-
-<NotificationStack items={liveNotifications} />

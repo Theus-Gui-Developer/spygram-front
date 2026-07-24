@@ -11,6 +11,7 @@
   } from '../lib/analysis-phases'
   import { searchStore } from '../lib/search-store.svelte'
   import { proxiedImageUrl } from '../lib/config'
+  import { getSearchCache, saveSearchCache } from '../lib/search-cache'
 
   const params = new URLSearchParams(window.location.hash.split('?')[1] ?? '')
   const username = params.get('usuario') ?? 'usuario.exemplo'
@@ -83,14 +84,36 @@
   }
 
   onMount(() => {
+    const cache = getSearchCache()
+    const savedProgress = cache?.vslProgress ?? 0
+
+    if (savedProgress >= 100) {
+      progress = 100
+      showImageToast = true
+      showIgCta = true
+      return
+    }
+
+    if (savedProgress > 0) {
+      progress = savedProgress
+      if (!imageToastDismissed && progress >= imageFoundToast.appearAt) showImageToast = true
+      if (!igCtaDismissed && progress >= 95) showIgCta = true
+    }
+
     const intervalMs = 50
     const increment = 100 / (VSL_PROGRESS_DURATION_MS / intervalMs)
+    let saveTick = 0
 
     const timer = setInterval(() => {
       progress = Math.min(100, progress + increment)
 
       if (!imageToastDismissed && progress >= imageFoundToast.appearAt) showImageToast = true
       if (!igCtaDismissed && progress >= 95) showIgCta = true
+
+      saveTick += 1
+      if (saveTick % 20 === 0 || progress >= 100) {
+        saveSearchCache({ username, genero, vslProgress: progress })
+      }
 
       if (progress >= 100) {
         progress = 100

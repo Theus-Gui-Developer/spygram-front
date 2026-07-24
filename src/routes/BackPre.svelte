@@ -4,18 +4,20 @@
   import { openCheckout } from '../lib/config'
 
   /**
-   * Port da rota /back/pre da referência:
+   * Port fiel da rota /back/pre da referência:
    * backredirect quando o usuário tenta sair antes de completar a investigação.
    */
-  let timeLeft = $state(299)
-  const minutes = $derived(Math.floor(timeLeft / 60))
-  const seconds = $derived(String(timeLeft % 60).padStart(2, '0'))
+  let toastVisible = $state(false)
 
   onMount(() => {
-    const id = setInterval(() => {
-      timeLeft = timeLeft > 0 ? timeLeft - 1 : 0
-    }, 1000)
-    return () => clearInterval(id)
+    const first = setTimeout(() => (toastVisible = true), 600)
+    const hide = setTimeout(() => (toastVisible = false), 4600)
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100])
+
+    return () => {
+      clearTimeout(first)
+      clearTimeout(hide)
+    }
   })
 
   function backToQuiz() {
@@ -23,51 +25,76 @@
   }
 </script>
 
-<div class="v4-report-shell flex min-h-screen flex-col items-center px-4 py-6">
-  <div class="w-full max-w-[420px]">
+<div class="min-h-screen bg-[#0a0a0f] px-4 py-6 text-white" style="font-family: 'Inter', sans-serif;">
+  <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-orange-900/10 via-transparent to-red-900/10"></div>
+
+  <div class="relative z-10 mx-auto w-full max-w-[420px]">
+    <!-- Toast -->
+    <div
+      class="fixed left-1/2 top-4 z-50 w-[90%] max-w-sm -translate-x-1/2 rounded-xl bg-gradient-to-r from-red-600 to-red-500 px-4 py-3 shadow-[0_8px_32px_rgba(239,68,68,0.4)] transition-all duration-300 {toastVisible
+        ? 'translate-y-0 opacity-100'
+        : '-translate-y-4 opacity-0 pointer-events-none'}"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-base animate-pulse flex-shrink-0">⚠️</span>
+          <p class="text-sm font-semibold leading-snug">Investigação interrompida!</p>
+        </div>
+        <button onclick={() => (toastVisible = false)} class="text-white/70 hover:text-white text-lg leading-none flex-shrink-0">×</button>
+      </div>
+    </div>
+
     <div class="mb-6 flex justify-center">
-      <Logo />
+      <Logo variant="light" />
     </div>
 
     <!-- Alerta principal -->
-    <div class="v4-report-card mb-4 text-center">
-      <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="#dc2626">
-          <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
-        </svg>
-      </div>
-      <h1 class="mb-1 text-lg font-black text-slate-950">Investigação interrompida!</h1>
-      <p class="text-[13px] leading-relaxed text-slate-600">
-        Você saiu antes de completar a investigação.
-      </p>
-    </div>
-
-    <!-- Progresso pausado -->
-    <div class="v4-report-card mb-4">
-      <div class="mb-2 flex items-center justify-between text-[12px] font-bold">
-        <span class="text-slate-700">Investigação em andamento</span>
-        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700">pausada</span>
-      </div>
-      <div class="mb-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
-        <div class="h-full w-[68%] rounded-full bg-gradient-to-r from-[#FF7A00] to-[#FF0069]"></div>
-      </div>
-      <div class="flex items-center justify-between text-[11px] text-slate-500">
-        <span>Processo incompleto</span>
-        <span class="font-bold tabular-nums text-slate-700">68%</span>
+    <div class="mb-5 rounded-2xl bg-gradient-to-b from-red-600 to-red-700 p-6 text-center shadow-[0_0_40px_rgba(239,68,68,0.3)] relative overflow-hidden">
+      <div class="relative z-10">
+        <div class="mb-3 text-5xl">⚠️</div>
+        <h1 class="text-xl font-extrabold uppercase tracking-tight leading-tight">Espionagem interrompida!</h1>
+        <p class="mt-2 text-sm leading-relaxed text-red-100">Você saiu antes de completar a investigação</p>
       </div>
     </div>
 
-    <!-- Urgência -->
-    <div class="mb-5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-center">
-      <div class="mb-1 flex items-center justify-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-red-600">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm.75 10.5L17 15l-.75 1.3L11 13V6.5h1.75V12.5Z" />
-        </svg>
-        Tempo limitado
+    <!-- Cards de status -->
+    <div class="mb-5 space-y-3">
+      <div class="rounded-xl border border-white/10 bg-white/5 p-4 flex items-start gap-3">
+        <span class="text-2xl flex-shrink-0">🔍</span>
+        <div>
+          <h3 class="text-orange-400 font-bold text-sm mb-1">Investigação em Andamento</h3>
+          <p class="text-slate-300 text-xs leading-relaxed">
+            Sua varredura foi <strong class="text-white">pausada</strong> e o processo está sendo <strong class="text-orange-400">interrompido</strong>
+          </p>
+        </div>
       </div>
-      <p class="text-[12px] leading-relaxed text-red-700">
-        Sua análise será <strong>perdida permanentemente</strong> em
-        <strong class="tabular-nums">{minutes}:{seconds}</strong>
+
+      <div class="rounded-xl border border-white/10 bg-white/5 p-4 flex items-start gap-3">
+        <span class="text-2xl flex-shrink-0">📋</span>
+        <div>
+          <h3 class="text-orange-400 font-bold text-sm mb-1">Processo Incompleto</h3>
+          <p class="text-slate-300 text-xs leading-relaxed">
+            A análise estava em <strong class="text-white">progresso</strong> e precisa ser <strong class="text-orange-400">finalizada</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-white/5 p-4 flex items-start gap-3">
+        <span class="text-2xl flex-shrink-0">⏰</span>
+        <div>
+          <h3 class="text-red-400 font-bold text-sm mb-1">Tempo Limitado</h3>
+          <p class="text-slate-300 text-xs leading-relaxed">
+            A conexão será <strong class="text-red-400">perdida permanentemente</strong> se você não voltar agora
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Banner de urgência -->
+    <div class="mb-5 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 p-4 text-center shadow-lg">
+      <p class="text-white font-extrabold text-sm uppercase tracking-tight mb-1">Não interrompa o processo!</p>
+      <p class="text-red-100 text-xs leading-relaxed">
+        A investigação estava em andamento e precisa ser <strong>finalizada</strong>. Volte agora para <strong>completar a análise</strong> antes que a conexão seja perdida!
       </p>
     </div>
 
@@ -75,13 +102,17 @@
     <button
       type="button"
       onclick={backToQuiz}
-      class="animate-crack-pulse mb-4 block w-full rounded-2xl bg-gradient-to-r from-[#833AB4] via-[#E1306C] to-[#F77737] px-5 py-4 text-center text-[14px] font-black uppercase tracking-wide text-white"
+      class="animate-crack-pulse relative mb-4 block w-full overflow-hidden rounded-2xl border-2 border-dashed border-yellow-300/50 bg-gradient-to-r from-[#FFD600] via-[#FF7A00] via-[#FF0069] to-[#7638FA] px-5 py-5 text-center text-base font-extrabold uppercase tracking-wide text-white shadow-[0_0_30px_rgba(255,0,105,0.4)] transition-all hover:-translate-y-1 hover:shadow-[0_0_50px_rgba(255,0,105,0.6)] active:scale-95"
     >
-      Voltar e continuar investigação
+      <span class="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-white/20 via-transparent to-white/20"></span>
+      <span class="relative z-10 flex items-center justify-center gap-3">
+        <span class="text-2xl">🔍</span>
+        <span>Voltar e continuar investigação</span>
+      </span>
     </button>
 
     <!-- Oferta -->
-    <div class="rounded-xl border-2 border-[#E1306C]/45 bg-gradient-to-br from-[#1e1024] to-[#141418] p-4 text-center shadow-[0_10px_30px_rgba(225,48,108,0.15)]">
+    <div class="rounded-2xl border border-[#E1306C]/45 bg-gradient-to-br from-[#1e1024] to-[#141418] p-4 text-center shadow-[0_10px_30px_rgba(225,48,108,0.15)]">
       <div class="mb-2 inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-red-400">
         Última chance: 50% OFF
       </div>
@@ -103,6 +134,14 @@
       >
         Não, vou continuar a investigação grátis
       </button>
+    </div>
+
+    <!-- Aviso final -->
+    <div class="mt-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+      <span class="text-red-400 text-lg flex-shrink-0">⚡</span>
+      <p class="text-xs leading-relaxed text-red-200">
+        <strong>ATENÇÃO:</strong> Se você fechar esta página, toda a investigação será perdida e você terá que começar do zero!
+      </p>
     </div>
   </div>
 </div>

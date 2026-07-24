@@ -85,7 +85,13 @@
     }
   }
 
-  const BACK_REDIRECT_ROUTES: Route[] = ['vsl', 'relatorio', 'acessando-instagram', 'InstaView']
+  /**
+   * Back redirect por etapa, espelhando a referência:
+   * - antes do relatório (input / análise / vsl): voltar cai em /back/pre
+   * - a partir do relatório: voltar cai em /back/vsl
+   */
+  const BACK_REDIRECT_PRE_ROUTES: Route[] = ['inicio', 'analise', 'vsl']
+  const BACK_REDIRECT_VSL_ROUTES: Route[] = ['relatorio', 'acessando-instagram', 'InstaView']
 
   hydrateSearchStore()
 
@@ -154,26 +160,37 @@
   }
 
   // Back redirect: rotas do funil que, ao pressionar voltar, devem cair em
-  // /back/vsl em vez de sair do fluxo. VSL usa pushState (comportamento original);
-  // as demais rotas usam replaceState para marcar o histórico atual.
+  // /back/pre (antes do relatório) ou /back/vsl (a partir do relatório).
+  // Usamos replaceState para marcar a entrada atual sem empilhar entradas
+  // duplicadas no histórico.
   $effect(() => {
-    if (!BACK_REDIRECT_ROUTES.includes(route)) return
+    if (
+      !BACK_REDIRECT_PRE_ROUTES.includes(route) &&
+      !BACK_REDIRECT_VSL_ROUTES.includes(route)
+    )
+      return
     if (backRedirectMarked.has(route)) return
 
     backRedirectMarked = new Set([...backRedirectMarked, route])
 
-    if (route === 'vsl') {
-      window.history.pushState({ backRedirect: true }, '', window.location.href)
-    } else {
-      window.history.replaceState({ backRedirect: true }, '', window.location.href)
-    }
+    window.history.replaceState({ backRedirect: true }, '', window.location.href)
   })
 
   function handlePopState(event: PopStateEvent) {
-    if (event.state?.backRedirect && BACK_REDIRECT_ROUTES.includes(route)) {
+    // Só intercepta se a entrada anterior foi explicitamente marcada como back redirect.
+    if (!event.state?.backRedirect) return
+
+    const params = parseRoute().query
+
+    if (BACK_REDIRECT_VSL_ROUTES.includes(route)) {
       event.preventDefault()
-      const params = parseRoute().query
       window.location.hash = `#/back/vsl${params ? '?' + params : ''}`
+      return
+    }
+
+    if (BACK_REDIRECT_PRE_ROUTES.includes(route)) {
+      event.preventDefault()
+      window.location.hash = `#/back/pre${params ? '?' + params : ''}`
     }
   }
 </script>
